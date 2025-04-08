@@ -69,9 +69,9 @@ def prepare_data(data_name, args):
     if not os.path.exists(output_dir):
         output_dir = f"outputs/{output_dir}"
     
-    generated_dataset_file = f"{output_dir}/{data_name}/first_reasonings/{out_file_prefix}_num{args.num_test_sample}s{args.start}e{args.end}_first_reasoning_dataset.json"
+    generated_dataset_file = f"{output_dir}/{data_name}/first_reasoning/{out_file_prefix}_num{args.num_test_sample}s{args.start}e{args.end}_first_reasoning.json"
     os.makedirs(f"{output_dir}/{data_name}", exist_ok=True)
-    os.makedirs(f"{output_dir}/{data_name}/first_reasonings", exist_ok=True)
+    os.makedirs(f"{output_dir}/{data_name}/first_reasoning", exist_ok=True)
     return examples, generated_dataset_file
 
 
@@ -87,15 +87,14 @@ def setup(args):
         max_model_len=args.max_model_len,
         seed=args.seed,
     )
-    tokenizer = llm.get_tokenizer()
 
-    # Infer & eval
+    # Infer
     data_list = args.data_names.split(",")
     for data_name in data_list:
-        main(llm, tokenizer, data_name, args)
+        main(llm, data_name, args)
 
 
-def main(llm, tokenizer, data_name, args):
+def main(llm, data_name, args):
     examples, generated_dataset_file = prepare_data(data_name, args)
     print("=" * 50)
     print("data:", data_name, " , #samples:", len(examples))
@@ -124,23 +123,23 @@ def main(llm, tokenizer, data_name, args):
 
     # Start generation
     stop_token = ["Alternatively,"]
-    prompts = [sample["prompt"] for sample in samples for _ in range(args.n_sampling)]
+    prompts = [sample["prompt"] for sample in samples] # for _ in range(args.n_sampling)]
     sampling_params = SamplingParams(
         temperature=args.temperature,
         top_p=args.top_p,
         min_p=args.min_p,
         max_tokens=args.max_tokens_per_call,
         min_tokens=2,
-        n=1,
+        n=args.n_sampling,
         skip_special_tokens=False,
         seed=args.seed,
         stop=stop_token,
     )
     outputs = llm.generate(prompts, sampling_params)
     outputs = sorted(outputs, key=lambda x: int(x.request_id))
-    generated_reasonings = [output.outputs[0].text.rstrip() for output in outputs]
-    stop_reasons = [output.outputs[0].stop_reason for output in outputs]
-    assert len(generated_reasonings) == len(prompts)
+    generated_reasonings = [output.outputs[i].text.rstrip() for output in outputs for i in range(args.n_sampling)]
+    stop_reasons = [output.outputs[i].stop_reason for output in outputs for i in range(args.n_sampling)]
+    assert len(generated_reasonings) == len(prompts) * args.n_sampling
 
     # Prepare output
     updated_samples = []
@@ -152,13 +151,12 @@ def main(llm, tokenizer, data_name, args):
             if sample_stop_reasons[j] == stop_token[0]:
                 selected_sample_generated_reasonings.append(sample_generated_reasonings[j])
 
-        sample.update({"first_reasonings": selected_sample_generated_reasonings})
+        sample.update({"first_reasoning": selected_sample_generated_reasonings})
         updated_samples.append(sample)
 
     # Save
     print(f"Save to {generated_dataset_file}")
     json.dump(updated_samples, open(generated_dataset_file, "w",), indent=2)
-    #save_jsonl(updated_samples, generated_dataset_file)
 
 
 if __name__ == "__main__":
