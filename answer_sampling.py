@@ -9,6 +9,8 @@ import torch
 from vllm import LLM, SamplingParams
 
 from utils.data import load_generated_data
+from utils.parser import extract_pred_and_parse
+from utils.eval import per_sample_verification
 
 
 def parse_args():
@@ -30,6 +32,7 @@ def parse_args():
     parser.add_argument("--max_num_seqs", type=int, default=32)
     parser.add_argument('--max_model_len', type=int, default=64000)
     parser.add_argument("--n_sampling", default=1, type=int, help="I.e. n")
+    parser.add_argument("--evaluation_mode", action='store_true', default=False)
     args = parser.parse_args()
     # top_p must be 1 when using greedy sampling (vllm)
     args.top_p = 1 if args.temperature == 0 else args.top_p
@@ -56,14 +59,18 @@ def prepare_data(data_path, data_name, args):
 
     # Get output file name
     model_name = args.model_name_or_path.split('/')[-1]
-    out_file_prefix = f"{args.split}_{model_name}_seed{args.seed}_t{args.temperature}_len{args.max_tokens_per_call}"
+    out_file_prefix = f"{args.split}_{data_name}_{model_name}_seed{args.seed}_t{args.temperature}_len{args.max_tokens_per_call}"
     output_dir = args.output_dir
     if not os.path.exists(output_dir):
         output_dir = f"outputs/{output_dir}"
     generated_dataset_file = f"{output_dir}/{data_name}/predictions/{out_file_prefix}_num{args.num_test_sample}s{args.start}e{args.end}_dataset_predictions.json"
+    self_correction_file = f"{output_dir}/{data_name}/self_correction/{out_file_prefix}_num{args.num_test_sample}s{args.start}e{args.end}_self_correction.json"
+    self_correction_performance = f"{output_dir}/{data_name}/self_correction/{out_file_prefix}_num{args.num_test_sample}s{args.start}e{args.end}_self_correction_performance.json"
+
     os.makedirs(f"{output_dir}/{data_name}", exist_ok=True)
     os.makedirs(f"{output_dir}/{data_name}/predictions", exist_ok=True)
-    return examples, generated_dataset_file
+    os.makedirs(f"{output_dir}/{data_name}/self_correction", exist_ok=True)
+    return examples, generated_dataset_file, self_correction_file, self_correction_performance
 
 
 def setup(args):
@@ -90,7 +97,7 @@ def setup(args):
 
 
 def main(llm, tokenizer, data_name, data_path, args):
-    examples, generated_dataset_file = prepare_data(data_path, data_name, args)
+    examples, generated_dataset_file, self_correction_file, self_correction_performance = prepare_data(data_path, data_name, args)
     print("=" * 50)
     print("data:", data_name, " , #samples:", len(examples))
 
@@ -102,13 +109,30 @@ def main(llm, tokenizer, data_name, data_path, args):
             "prompt": example['prompt'],
             'first_reasonings': example['first_reasonings']
         }
+        if args.evaluation_mode:
+            sample.update({"final_score_per_first_reasoning": example['final_score_per_first_reasoning']})
+
         samples.append(sample)
 
     prompts = []
-    for i, sample in enumerate(samples):
-        for j in range(len(sample['first_reasonings'])):
-            for _ in range(args.n_sampling):
-                prompts.append(sample['prompt'] + sample['first_reasonings'][j] + "\n</think>\n\n")
+    new_gt =[]
+    if args.evaluation_mode:
+        for i, sample in enumerate(samples):
+            tmp_indices = []
+            for j in range(len(sample['first_reasonings'])):
+                if sample['final_score_per_first_reasoning'][j] == 0:
+                    prompts.append(sample['prompt'] + sample['first_reasonings'][j] + "/n/nAlternatively,")
+                    new_gt.append(sample['gt'])
+                else:
+                    tmp_indices.append(j)
+            for j in sorted(tmp_indices, reverse=True):
+                sample['first_reasonings'].pop(j)
+                sample['final_score_per_first_reasoning'].pop(j)
+    else:
+        for i, sample in enumerate(samples):
+            for j in range(len(sample['first_reasonings'])):
+                for _ in range(args.n_sampling):
+                    prompts.append(sample['prompt'] + sample['first_reasonings'][j] + "\n</think>\n\n")
 
     # Start inference
     sampling_params = SamplingParams(
@@ -127,23 +151,50 @@ def main(llm, tokenizer, data_name, data_path, args):
     generated_reasonings = [output.outputs[0].text for output in outputs]
     assert len(generated_reasonings) == len(prompts)
 
-    answers = []
-    start_idx = 0
-    for i, sample in enumerate(samples):
-        n_first_reasoning_sampling = len(sample['first_reasonings'])
-        sample_answers = generated_reasonings[start_idx : start_idx + (n_first_reasoning_sampling * args.n_sampling)]
-        assert len(sample_answers) == n_first_reasoning_sampling * args.n_sampling
-        answers.append([sample_answers[i * args.n_sampling:(i + 1) * args.n_sampling] for i in range(n_first_reasoning_sampling)])
-        start_idx = start_idx + (n_first_reasoning_sampling * args.n_sampling)
+    
+    if args.evaluation_mode:
 
-    updated_samples = []
-    for i, sample in enumerate(samples):
-        sample.update({"answer": answers[i]})
-        updated_samples.append(sample)
+        result= [extract_pred_and_parse(answer, data_name) for answer in generated_reasonings]
+        performance = per_sample_verification(result, new_gt)
+        accuracy = (sum(performance)/len(performance))
 
-    #save_jsonl(updated_samples, generated_dataset_file)
-    print(f"Save to {generated_dataset_file}")
-    json.dump(updated_samples, open(generated_dataset_file, "w",), indent=2)
+        
+        start_idx = 0
+        for i, sample in enumerate(samples):
+            n_first_reasoning_sampling = len(sample['first_reasonings'])
+            generated_answers = generated_reasonings[start_idx : start_idx + (n_first_reasoning_sampling)]
+            start_idx = start_idx + n_first_reasoning_sampling
+            sample.update({"answer": generated_answers})
+
+
+        print(f"Save to {self_correction_file}")
+        json.dump(samples, open(self_correction_file, "w",), indent=2)
+
+        result_json = {
+        "data_name": data_name,    
+        "num_samples": len(performance),
+        "acc": float(f"{accuracy:.4f}") * 100,
+        }
+        print(f"Save to {self_correction_performance}")
+        json.dump(result_json, open(self_correction_performance, "w",), indent=2)
+
+    else:
+        answers = []
+        start_idx = 0
+        for i, sample in enumerate(samples):
+            n_first_reasoning_sampling = len(sample['first_reasonings'])
+            sample_answers = generated_reasonings[start_idx : start_idx + (n_first_reasoning_sampling * args.n_sampling)]
+            assert len(sample_answers) == n_first_reasoning_sampling * args.n_sampling
+            answers.append([sample_answers[i * args.n_sampling:(i + 1) * args.n_sampling] for i in range(n_first_reasoning_sampling)])
+            start_idx = start_idx + (n_first_reasoning_sampling * args.n_sampling)
+
+        updated_samples = []
+        for i, sample in enumerate(samples):
+            sample.update({"answer": answers[i]})
+            updated_samples.append(sample)
+
+        print(f"Save to {generated_dataset_file}")
+        json.dump(updated_samples, open(generated_dataset_file, "w",), indent=2)
 
 
 if __name__ == "__main__":

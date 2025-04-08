@@ -64,7 +64,7 @@ def prepare_data(data_name, args):
 
     # Get output file name
     model_name = args.model_name_or_path.split('/')[-1]
-    out_file_prefix = f"{args.split}_{model_name}_seed{args.seed}_t{args.temperature}_len{args.max_tokens_per_call}"
+    out_file_prefix = f"{args.split}_{data_name}_{model_name}_seed{args.seed}_t{args.temperature}_len{args.max_tokens_per_call}"
     output_dir = args.output_dir
     if not os.path.exists(output_dir):
         output_dir = f"outputs/{output_dir}"

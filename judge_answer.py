@@ -7,7 +7,7 @@ import numpy as np
 from tqdm import tqdm
 import torch
 from utils.data import load_generated_data, save_jsonl
-from utils.parser import deserialize_list_of_lists, extract_pred_and_parse
+from utils.parser import extract_pred_and_parse
 from utils.eval import per_sample_verification
 
 
@@ -56,7 +56,7 @@ def prepare_data(data_path, data_name, args):
     if not os.path.exists(output_dir):
         output_dir = f"outputs/{output_dir}"
     
-    generated_dataset_file = f"{output_dir}/{data_name}/judge/{out_file_prefix}_num{args.num_test_sample}s{args.start}e{args.end}_dataset_judge_answer.jsonl"
+    generated_dataset_file = f"{output_dir}/{data_name}/judge/{out_file_prefix}_num{args.num_test_sample}s{args.start}e{args.end}_dataset_judge_answer.json"
 
     os.makedirs(f"{output_dir}/{data_name}", exist_ok=True)
     os.makedirs(f"{output_dir}/{data_name}/judge", exist_ok=True)
@@ -108,30 +108,28 @@ def main(data_name, data_path, args):
             
             scores = []
             preds = []
+            scores_per_first_reasoning = []
             for j in range(len(sample['first_reasonings'])):
-                first_reasoning_scores = []
-                first_reasoning_preds = []
-                for k in range(len(sample['answer'][j])):
-                    result = extract_pred_and_parse(sample['answer'][j][k], data_name)
-                    performance = per_sample_verification(result, sample['gt'])
 
-                    result = [str(r) for r in result] 
-                    first_reasoning_preds.append(result)
-                    first_reasoning_scores.append(performance)
-                scores.append(first_reasoning_scores)
-                preds.append(first_reasoning_preds)
+                result= [extract_pred_and_parse(answer, data_name) for answer in sample['answer'][j]]
+                performance = per_sample_verification(result, sample['gt'])
+                result = [str(r) for r in result] 
+                scores.append(performance)
+                preds.append(result)
+                scores_per_first_reasoning.append(sum(performance)/len(performance))
 
             sample.update({
                 "score": scores,
-                "final_answer": preds
+                "final_answer": preds,
+                "final_score_per_first_reasoning":scores_per_first_reasoning
             })
 
             updated_samples.append(sample)
 
-        try:
-            save_jsonl(samples, generated_dataset_file)
-        except Exception as e:
-            print(f"Error saving generated reasoning: {e}")
+
+        print(f"Save to {generated_dataset_file}")
+        json.dump(updated_samples, open(generated_dataset_file, "w",), indent=2)
+
 
 
 if __name__ == "__main__":
