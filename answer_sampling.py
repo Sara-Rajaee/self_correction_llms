@@ -121,7 +121,7 @@ def main(llm, data_name, data_path, args):
                     sample['avg_score_per_first_reasoning'].pop(j)
                 new_samples.append(sample)
         samples = new_samples
-        print(f"#Prompts: {len(samples)}, #First Reasonings: {len(prompts)}")
+        print(f"#Valid Samples: {len(samples)}, #First Reasonings: {len(prompts)}")
     else:
         for sample in samples:
             for j in range(len(sample['first_reasoning'])):
