@@ -29,9 +29,10 @@ def parse_args():
     parser.add_argument('--max_model_len', type=int, default=64000)
     parser.add_argument("--n_sampling", default=1, type=int, help="I.e. n")
     parser.add_argument("--eval_mode", action='store_true', default=False, 
-        help=("When False, force the model to do prediction with the first reasoning. " 
+        help=("When False, force the model to do prediction with the first reasoning. "
               "When True, evaluate the self-correction ability of a LLM")
     )
+    parser.add_argument("--score_threshold", type=float, default=0)
     args = parser.parse_args()
     # top_p must be 1 when using greedy sampling (vllm)
     args.top_p = 1 if args.temperature == 0 else args.top_p
@@ -59,8 +60,8 @@ def prepare_data(data_path, args):
     else:
         out_file_prefix = data_path[:-len("_judge.json")]
     prediction_file = f"{out_file_prefix}_{model_name}_prediction.json"
-    self_correction_file = f"{out_file_prefix}_{model_name}_self_correction.json"
-    self_correction_performance_file = f"{out_file_prefix}_{model_name}_self_correction_performance.json"
+    self_correction_file = f"{out_file_prefix}_{model_name}_thres{args.score_threshold}_self_correction.json"
+    self_correction_performance_file = f"{out_file_prefix}_{model_name}_thres{args.score_threshold}_self_correction_performance.json"
     return examples, prediction_file, self_correction_file, self_correction_performance_file
 
 
@@ -111,7 +112,7 @@ def main(llm, data_name, data_path, args):
             if 0 in sample["avg_score_per_first_reasoning"]:
                 tmp_indices = []
                 for j in range(len(sample['first_reasoning'])):
-                    if sample["avg_score_per_first_reasoning"][j] == 0:  # Choose the first reasoning with 0 avg score
+                    if sample["avg_score_per_first_reasoning"][j] <= args.score_threshold:  # Choose the first reasoning with 0 avg score
                         prompts.append(sample['prompt'] + sample['first_reasoning'][j] + "\n\nAlternatively,")
                     else:
                         tmp_indices.append(j)
