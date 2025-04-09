@@ -29,10 +29,8 @@ def parse_args():
     parser.add_argument('--max_model_len', type=int, default=64000)
     parser.add_argument("--n_sampling", default=1, type=int, help="I.e. n")
     parser.add_argument("--eval_mode", action='store_true', default=False, 
-                        help=(
-                            "When False, force the model to do prediction with the first reasoning. " 
-                            "When True, evaluate the self-correction ability of a LLM"
-                        )
+        help=("When False, force the model to do prediction with the first reasoning. " 
+              "When True, evaluate the self-correction ability of a LLM")
     )
     args = parser.parse_args()
     # top_p must be 1 when using greedy sampling (vllm)
