@@ -122,11 +122,11 @@ def main(llm, data_name, data_path, args):
                     sample['avg_score_per_first_reasoning'].pop(j)
                 new_samples.append(sample)
         samples = new_samples
-        print(f"#Valid Samples: {len(samples)}, #First Reasonings: {len(prompts)}")
     else:
         for sample in samples:
-            for j in range(len(sample['first_reasoning'])):
-                prompts.append(sample['prompt'] + sample['first_reasoning'][j] + "\n</think>\n\n")
+            for first_reasoning in sample['first_reasoning']:
+                prompts.append(sample['prompt'] + first_reasoning + "\n</think>\n\n")
+    print(f"#Valid Samples: {len(samples)}, #First Reasonings: {len(prompts)}")
 
     # Start inference
     sampling_params = SamplingParams(
