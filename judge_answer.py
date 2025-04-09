@@ -62,7 +62,7 @@ def main(data_name, data_path, args):
             preds_per_first_reasoning = [extract_pred_and_parse(think_sum, data_name) for think_sum in sample['think_sum'][j]]
             scores_per_first_reasoning = per_sample_verification(preds_per_first_reasoning, sample['gt'])
             # Convert to string for saving
-            preds_per_first_reasoning = [str(pred) for pred in preds_per_first_reasoning]
+            preds_per_first_reasoning = [str(pred[0]) for pred in preds_per_first_reasoning]
             
             scores_per_prompt.append(scores_per_first_reasoning)
             preds_per_prompt.append(preds_per_first_reasoning)
