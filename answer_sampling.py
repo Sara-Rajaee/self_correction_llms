@@ -153,7 +153,8 @@ def main(llm, data_name, data_path, args):
             think_sum_per_prompt = generated_reasonings[start_idx : start_idx + (n_first_reasoning_per_prompt * args.n_sampling)]
             assert len(think_sum_per_prompt) == n_first_reasoning_per_prompt * args.n_sampling
 
-            think_sum_per_prompt = [think_sum_per_prompt[i * args.n_sampling : (i + 1) * args.n_sampling] for i in range(n_first_reasoning_per_prompt)]
+            if think_sum_per_prompt:
+                think_sum_per_prompt = [think_sum_per_prompt[i * args.n_sampling : (i + 1) * args.n_sampling] for i in range(n_first_reasoning_per_prompt)]
             sample.update({"think_sum": think_sum_per_prompt})  # Everything after </think>
             start_idx = start_idx + (n_first_reasoning_per_prompt * args.n_sampling)
 
