@@ -139,8 +139,8 @@ def main(llm, data_name, data_path, args):
     )
     outputs = llm.generate(prompts, sampling_params)
     outputs = sorted(outputs, key=lambda x: int(x.request_id))
-    generated_reasonings = [output.outputs[i].text for output in outputs for i in range(args.n_sampling)]
-    assert len(generated_reasonings) == len(prompts)
+    generated_reasonings = [output.outputs[i].text for output in outputs for i in range(args.n_sampling)] # flatten
+    assert len(generated_reasonings) == len(prompts) * args.n_sampling
 
     # Save
     # Force the LLM to summatize the reasoning and do prediciton
