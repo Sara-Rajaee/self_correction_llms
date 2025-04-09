@@ -55,7 +55,7 @@ def prepare_data(data_path, args):
     # Get output file name
     model_name = args.model_name_or_path.split('/')[-1]
     if not args.eval_mode:
-        out_file_prefix = data_path[:-len("_first_reasoning.json")]
+        out_file_prefix = data_path[:-len(".json")]
     else:
         out_file_prefix = data_path[:-len("_judge.json")]
     prediction_file = f"{out_file_prefix}_{model_name}_prediction.json"
