@@ -69,9 +69,8 @@ def prepare_data(data_name, args):
     if not os.path.exists(output_dir):
         output_dir = f"outputs/{output_dir}"
     
-    generated_dataset_file = f"{output_dir}/{data_name}/first_reasoning/{out_file_prefix}_num{args.num_test_sample}s{args.start}e{args.end}_first_reasoning.json"
+    generated_dataset_file = f"{output_dir}/{data_name}/{out_file_prefix}_num{args.num_test_sample}s{args.start}e{args.end}_first_reasoning.json"
     os.makedirs(f"{output_dir}/{data_name}", exist_ok=True)
-    os.makedirs(f"{output_dir}/{data_name}/first_reasoning", exist_ok=True)
     return examples, generated_dataset_file
 
 

@@ -10,34 +10,24 @@ from utils.eval import per_sample_verification
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_names", default="gsm8k,math", type=str)
-    parser.add_argument("--data_path", default="", type=str)
-    parser.add_argument("--model_name_or_path", default="gpt-4", type=str)
-    parser.add_argument("--output_dir", default="./output", type=str)
-    parser.add_argument("--split", default="test", type=str)
+    parser.add_argument("--data_names", default="math500", type=str)
+    parser.add_argument("--data_paths", default="", type=str)
     args = parser.parse_args()
     return args
 
 
-def prepare_data(data_path, data_name, args):
+def prepare_data(data_path):
     examples = load_generated_data(data_path)
 
     # Get out_file name
-    model_name = args.model_name_or_path.split('/')[-1]
-    out_file_prefix = f"{args.split}_{model_name}"
-    output_dir = args.output_dir
-    if not os.path.exists(output_dir):
-        output_dir = f"outputs/{output_dir}"
-    
-    judge_file = f"{output_dir}/{data_name}/judge/{out_file_prefix}_judge.json"
-    os.makedirs(f"{output_dir}/{data_name}", exist_ok=True)
-    os.makedirs(f"{output_dir}/{data_name}/judge", exist_ok=True)
+    out_file_prefix = data_path[:-len(".json")]
+    judge_file = f"{out_file_prefix}_judge.json"
     return examples, judge_file
 
 
 def setup(args):
     # Eval
-    data_paths = args.data_path.split(",")
+    data_paths = args.data_paths.split(",")
     data_list = args.data_names.split(",")
     assert len(data_list) == len(data_paths)
 
@@ -46,7 +36,7 @@ def setup(args):
 
 
 def main(data_name, data_path, args):
-    examples, judge_file = prepare_data(data_path, data_name, args)
+    examples, judge_file = prepare_data(data_path)
     print("Data prepration done!")
     print("=" * 50)
     print("data:", data_name, " , #samples:", len(examples))

@@ -16,14 +16,10 @@ from utils.eval import per_pred_verification
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_names", default="gsm8k,math", type=str)
-    parser.add_argument("--data_path", default="", type=str)
+    parser.add_argument("--data_paths", default="", type=str)
     parser.add_argument("--model_name_or_path", default="gpt-4", type=str)
     parser.add_argument("--output_dir", default="./output", type=str)
-    parser.add_argument("--split", default="test", type=str)
-    parser.add_argument("--num_test_sample", default=-1, type=int)
     parser.add_argument("--seed", default=0, type=int)
-    parser.add_argument("--start", default=0, type=int)
-    parser.add_argument("--end", default=-1, type=int)
     parser.add_argument("--top_p", default=1, type=float)
     parser.add_argument("--min_p", default=0., type=float)
     parser.add_argument("--temperature", default=0, type=float)
@@ -55,26 +51,18 @@ def set_seed(seed: int = 42) -> None:
     print(f"Random seed set as {seed}")
 
 
-def prepare_data(data_path, data_name, args):
+def prepare_data(data_path, args):
     examples = load_generated_data(data_path)
-    # sample `num_test_sample` from dataset for debug purpose
-    if args.num_test_sample > 0:
-        examples = examples[: args.num_test_sample]
-    examples = examples[args.start : len(examples) if args.end == -1 else args.end]
 
     # Get output file name
     model_name = args.model_name_or_path.split('/')[-1]
-    out_file_prefix = f"{args.split}_{model_name}_seed{args.seed}_t{args.temperature}_len{args.max_tokens_per_call}"
-    output_dir = args.output_dir
-    if not os.path.exists(output_dir):
-        output_dir = f"outputs/{output_dir}"
-    prediction_file = f"{output_dir}/{data_name}/prediction/{out_file_prefix}_num{args.num_test_sample}s{args.start}e{args.end}_prediction.json"
-    self_correction_file = f"{output_dir}/{data_name}/self_correction/{out_file_prefix}_num{args.num_test_sample}s{args.start}e{args.end}_self_correction.json"
-    self_correction_performance_file = f"{output_dir}/{data_name}/self_correction/{out_file_prefix}_num{args.num_test_sample}s{args.start}e{args.end}_self_correction_performance.json"
-
-    os.makedirs(f"{output_dir}/{data_name}", exist_ok=True)
-    os.makedirs(f"{output_dir}/{data_name}/prediction", exist_ok=True)
-    os.makedirs(f"{output_dir}/{data_name}/self_correction", exist_ok=True)
+    if not args.eval_mode:
+        out_file_prefix = data_path[:-len("_first_reasoning.json")]
+    else:
+        out_file_prefix = data_path[:-len("_judge.json")]
+    prediction_file = f"{out_file_prefix}_{model_name}_prediction.json"
+    self_correction_file = f"{out_file_prefix}_{model_name}_self_correction.json"
+    self_correction_performance_file = f"{out_file_prefix}_{model_name}_self_correction_performance.json"
     return examples, prediction_file, self_correction_file, self_correction_performance_file
 
 
@@ -92,7 +80,7 @@ def setup(args):
     )
 
     # Infer
-    data_paths = args.data_path.split(",")
+    data_paths = args.data_paths.split(",")
     data_list = args.data_names.split(",")
     assert len(data_list) == len(data_paths)
 
@@ -101,7 +89,7 @@ def setup(args):
 
 
 def main(llm, data_name, data_path, args):
-    examples, prediction_file, self_correction_file, self_correction_performance_file = prepare_data(data_path, data_name, args)
+    examples, prediction_file, self_correction_file, self_correction_performance_file = prepare_data(data_path, args)
     print("=" * 50)
     print("data:", data_name, " , #samples:", len(examples))
 
