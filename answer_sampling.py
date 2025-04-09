@@ -16,7 +16,7 @@ from utils.eval import per_pred_verification
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_names", default="gsm8k,math", type=str)
-    parser.add_argument("--dataset_dir", default="", type=str)
+    parser.add_argument("--data_path", default="", type=str)
     parser.add_argument("--model_name_or_path", default="gpt-4", type=str)
     parser.add_argument("--output_dir", default="./output", type=str)
     parser.add_argument("--split", default="test", type=str)
@@ -92,7 +92,7 @@ def setup(args):
     )
 
     # Infer
-    data_paths = args.dataset_dir.split(",")
+    data_paths = args.data_path.split(",")
     data_list = args.data_names.split(",")
     assert len(data_list) == len(data_paths)
 
