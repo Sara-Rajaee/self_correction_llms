@@ -109,7 +109,7 @@ def main(llm, data_name, data_path, args):
     if args.eval_mode:
         new_samples = []
         for sample in samples:
-            if 0 in sample["avg_score_per_first_reasoning"]:
+            if any([score <= args.score_threshold for score in sample["avg_score_per_first_reasoning"]]):
                 tmp_indices = []
                 for j in range(len(sample['first_reasoning'])):
                     if sample["avg_score_per_first_reasoning"][j] <= args.score_threshold:  # Choose the first reasoning with 0 avg score
