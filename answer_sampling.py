@@ -186,10 +186,12 @@ def main(llm, data_name, data_path, args):
         print(f"Save to {self_correction_file}")
         json.dump(samples, open(self_correction_file, "w",), indent=2)
 
+        acc = np.mean(all_scores)
+        print(f"False to Correct Accuracy: {acc}")
         result_json = {   
             "num_samples": len(samples),
             "num_pres": len(all_scores),
-            "acc": float(f"{np.mean(all_scores):.4f}") * 100,
+            "acc": float(f"{acc:.4f}") * 100,
         }
         print(f"Save to {self_correction_performance_file}")
         json.dump(result_json, open(self_correction_performance_file, "w",), indent=2)
