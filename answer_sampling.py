@@ -190,7 +190,7 @@ def main(llm, data_name, data_path, args):
         result_json = {   
             "num_samples": len(samples),
             "num_first_reasoning": len(prompts),
-            "num_pres": len(all_scores),
+            "num_preds": len(all_scores),
             "acc": float(f"{acc:.4f}") * 100,
         }
         print(f"Save to {self_correction_performance_file}")
