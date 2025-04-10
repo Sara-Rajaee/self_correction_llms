@@ -142,7 +142,7 @@ def main(llm, data_name, data_path, args):
     assert len(generated_reasonings) == len(prompts) * args.n_sampling
 
     # Save
-    # Force the LLM to summatize the reasoning and do prediciton
+    # Force the LLM to summarize the reasoning and do prediciton
     if not args.eval_mode:
         start_idx = 0
         for sample in samples:
