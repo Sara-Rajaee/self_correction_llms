@@ -109,11 +109,11 @@ def main(llm, data_name, data_path, args):
             if any([score <= args.score_threshold for score in sample["avg_score_per_first_reasoning"]]):
                 tmp_indices = []
                 for j in range(len(sample['first_reasoning'])):
-                    if sample["avg_score_per_first_reasoning"][j] <= args.score_threshold:  # Choose the first reasoning with 0 avg score
+                    if sample["avg_score_per_first_reasoning"][j] <= args.score_threshold: 
                         prompts.append(sample['prompt'] + sample['first_reasoning'][j] + "\n\nAlternatively,")
                     else:
                         tmp_indices.append(j)
-                # Delete the first reaosnings with avg score > 0
+
                 for j in sorted(tmp_indices, reverse=True): 
                     sample['first_reasoning'].pop(j)
                     sample['avg_score_per_first_reasoning'].pop(j)
