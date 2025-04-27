@@ -1,7 +1,6 @@
 *.e
 *.o
 *.json
-*.jsonl
 *.txt
 *.sh
 *.pyc
