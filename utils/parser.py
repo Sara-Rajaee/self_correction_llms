@@ -23,7 +23,7 @@ def parse_question(example, data_name):
 def parse_ground_truth(example: Dict[str, Any], data_name):
     if data_name in ["math", "math500", "math500_level1", "math500_level2", 
                      "math500_level3", "math500_level4", "math500_level5",
-                     "aime24", "aime25", "aimo2"]:
+                     "aime24", "aime25", "aimo2", "hmmt"]:
         answer = "$" + example["answer"] + "$"
     elif data_name in ["mmlu_stem", "gpqa"]:
         abcd = "ABCD"
