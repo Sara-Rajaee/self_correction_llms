@@ -20,6 +20,7 @@ def parse_args():
     parser.add_argument("--seed", default=0, type=int)
     parser.add_argument("--top_p", default=1, type=float)
     parser.add_argument("--min_p", default=0., type=float)
+    parser.add_argument("--top_k", default=20, type=int)
     parser.add_argument("--temperature", default=0, type=float)
     parser.add_argument("--max_tokens_per_call", default=2048, type=int)
     parser.add_argument("--pipeline_parallel_size", type=int, default=1)
@@ -126,6 +127,7 @@ def main(llm, tokenizer, args):
         temperature=args.temperature,
         top_p=args.top_p,
         min_p=args.min_p,
+        top_k=args.top_k,
         max_tokens=args.max_tokens_per_call,
         min_tokens=2,
         n=args.n_sampling,
