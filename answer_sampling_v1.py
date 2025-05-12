@@ -72,6 +72,8 @@ def setup(args):
         max_num_seqs=args.max_num_seqs,
         max_model_len=args.max_model_len,
         seed=args.seed,
+        gpu_memory_utilization=0.96,
+        enforce_eager=True,
     )
     tokenizer = transformers.AutoTokenizer.from_pretrained(args.model_name_or_path)
 
